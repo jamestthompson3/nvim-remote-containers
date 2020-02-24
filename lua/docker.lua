@@ -27,9 +27,11 @@ function M.parseConfig()
     return
   end
   local parsedConfig = fn.json_decode(fn.join(fn.readfile("devcontainer.json")))
-  if not parsedConfig.image or parsedConfig.dockerFile then
-    error("must either specify an image or a Dockerfile")
-    return
+  if not parsedConfig.image then
+    if not parsedConfig.dockerFile then
+      error("must either specify an image or a Dockerfile")
+      return
+    end
   end
   if parsedConfig.image then
     local image = parsedConfig.image
@@ -46,16 +48,20 @@ function M.parseConfig()
   return parsedConfig
 end
 
+local function parseWorkspaceFolder(config)
+  if config.workspaceMount:find("localWorkspaceFolder") then
+    workspace = api.nvim_exec('pwd', true)
+  else
+    workspace = parsedConfig.workspaceMount
+  end
+  return workspace
+end
 
 local function runContainer(name)
   local parsedConfig = M.parseConfig()
   local stdout = loop.new_pipe(false)
   local stderr = loop.new_pipe(false)
-  if parsedConfig.workspaceMount:find("localWorkspaceFolder") then
-    workspace = api.nvim_exec('pwd', true)
-  else
-    workspace = parsedConfig.workspaceMount
-  end
+  parseWorkspaceFolder(parsedConfig)
   if parsedConfig.runArgs then
     cmd = parsedConfig.runArgs
   else
@@ -110,7 +116,11 @@ end
 
 local function buildFromImage()
   local images = {}
-  local foundImages = fn.systemlist("docker image ls -a --format '{{.Repository}}:{{.Tag}} {{.ID}}'")
+  foundImages = fn.systemlist("docker image ls -a --format '{{.Repository}}:{{.Tag}} {{.ID}}'")
+  if tonumber(fn.len(foundImages)) then
+    M.buildImage()
+    foundImages = fn.systemlist("docker image ls -a --format '{{.Repository}}:{{.Tag}} {{.ID}}'")
+  end
   for i, image in pairs(foundImages) do
     print(string.format('%d. %s', i, image))
     local repo = vim.split(image, "%s")
@@ -151,9 +161,14 @@ function M.attachToContainer()
   end
 end
 
-function M.buildContainer()
+function M.buildImage()
+  local parsedConfig = M.parseConfig()
+  print("Creating image from: ", parsedConfig.dockerFile)
+  api.nvim_command('copen')
+  api.nvim_command(string.format("term docker build -f %s %s", parsedConfig.dockerFile, parseWorkspaceFolder(parsedConfig)))
+  api.nvim_input('i')
 end
 
-M.attachToContainer()
+M.buildImage()
 
 return M
