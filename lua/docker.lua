@@ -88,7 +88,7 @@ local function runContainer(name)
     stdout:close()
     stderr:close()
     handle:close()
-    print(string.format("Container %s started succesfully", name.name))
+    print(string.format("Container %s running succesfully", name.name))
     vim.g.currentContainer = fn.system(string.format("docker inspect --format '{{.Name}}' %s", dockerId)):gsub("/", "")
   end))
   loop.read_start(stdout, onread)
@@ -100,7 +100,7 @@ local function startContainer(name)
   local stdout = loop.new_pipe(false)
   local stderr = loop.new_pipe(false)
   handle = loop.spawn('docker', {
-    args = {'start', name.image },
+    args = {'start', name.name },
     stdio = {stdout, stderr}
   }, function()
     stdout:read_stop()
@@ -118,8 +118,8 @@ local function buildFromImage()
   local images = {}
   foundImages = fn.systemlist("docker image ls -a --format '{{.Repository}}:{{.Tag}} {{.ID}}'")
   if tonumber(fn.len(foundImages)) then
-    M.buildImage()
-    foundImages = fn.systemlist("docker image ls -a --format '{{.Repository}}:{{.Tag}} {{.ID}}'")
+    M.buildImage(buildFromImage)
+    return
   end
   for i, image in pairs(foundImages) do
     print(string.format('%d. %s', i, image))
@@ -161,14 +161,15 @@ function M.attachToContainer()
   end
 end
 
+-- TODO some sort of callback to restart the process
+-- using spawn currently spams the floating window :/
 function M.buildImage()
   local parsedConfig = M.parseConfig()
   print("Creating image from: ", parsedConfig.dockerFile)
-  api.nvim_command('copen')
+  api.nvim_commnad('copen')
   api.nvim_command(string.format("term docker build -f %s %s", parsedConfig.dockerFile, parseWorkspaceFolder(parsedConfig)))
-  api.nvim_input('i')
+  api.nvim_input('<esc>')
 end
 
-M.buildImage()
-
 return M
+
