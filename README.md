@@ -4,7 +4,7 @@ This plugin aims to give you the functionality of VSCode's [remote container dev
 
 ## Available Lua Functions
 
-- `parseConfig`: parses `.devcontainer.json` file
+- `parseConfig`: parses `devcontainer.json` file
 - `attachToContainer`: Attaches to a docker container or builds a container from a user chose image
 - `buildImage`: Builds container from the Dockerfile specified in the `devcontainer.json` file
 
