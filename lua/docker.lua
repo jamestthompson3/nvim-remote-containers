@@ -1,12 +1,11 @@
-require 'utils'
+local utils = require 'utils'
 local api = vim.api
 local fn = vim.fn
 local loop = vim.loop
-local util = require 'nvim_lsp/util'
 
 local M = {}
 
-dockerId = ""
+local dockerId = ""
 local function onread(err, data)
   if err then
     print('ERROR: ', err)
@@ -18,10 +17,10 @@ local function onread(err, data)
 end
 
 function M.parseConfig()
-  if not (util.has_bins("docker")) then
+  if not (fn.executable("docker")) then
     error("must install docker for this functionality")
   end
-  if not (exists("devcontainer.json")) then
+  if not (utils.exists("devcontainer.json")) then
     -- TODO interactive creation of config
     print("no configuration file found")
     return
@@ -38,7 +37,7 @@ function M.parseConfig()
     local imageExists = fn.system("docker image ls"):find(image)
     if not imageExists then
       print("image not found, installing now...")
-      spawn('docker', {
+      utils.spawn('docker', {
         args = {'pull', image}
       },function()
         print("Image Pulled Successfully")
@@ -49,10 +48,11 @@ function M.parseConfig()
 end
 
 local function parseWorkspaceFolder(config)
+  local workspace
   if config.workspaceMount:find("localWorkspaceFolder") then
     workspace = api.nvim_exec('pwd', true)
   else
-    workspace = parsedConfig.workspaceMount
+    workspace = config.workspaceMount
   end
   return workspace
 end
@@ -61,7 +61,8 @@ local function runContainer(name)
   local parsedConfig = M.parseConfig()
   local stdout = loop.new_pipe(false)
   local stderr = loop.new_pipe(false)
-  parseWorkspaceFolder(parsedConfig)
+  local workspace = parseWorkspaceFolder(parsedConfig)
+  local cmd
   if parsedConfig.runArgs then
     cmd = parsedConfig.runArgs
   else
@@ -133,6 +134,27 @@ local function buildFromImage()
   runContainer(images[selected])
 end
 
+-- TODO: Still need to correctly set the current container
+-- via inspecting the container created when we run the image.
+function M.runImage()
+  local images = {}
+  local foundImages = fn.systemlist("docker image ls -a --format '{{.Repository}} {{.Tag}} {{.ID}}'")
+  if fn.len(foundImages) == 0 then
+    buildFromImage()
+    return
+  end
+  for i, img in pairs(foundImages) do
+    print(string.format('%d. %s', i, img))
+    local name = vim.split(img, "%s")
+    table.insert(images,{image = name[2], name = name[1]})
+  end
+  local selected = tonumber(fn.input('Select image number: '))
+  if not selected then
+    return
+  end
+  runContainer(images[selected])
+end
+
 function M.attachToContainer()
   local containers = {}
   local foundContainers = fn.systemlist("docker container ls -a --format '{{.Names}} {{.Image}}'")
@@ -163,10 +185,15 @@ end
 
 -- TODO some sort of callback to restart the process
 -- using spawn currently spams the floating window :/
-function M.buildImage()
+function M.buildImage(floating)
   local parsedConfig = M.parseConfig()
   print("Creating image from: ", parsedConfig.dockerFile)
-  api.nvim_commnad('copen')
+  print(floating)
+  if floating then
+    utils.floatingWindow()
+  else
+    api.nvim_command('copen')
+  end
   api.nvim_command(string.format("term docker build -f %s %s", parsedConfig.dockerFile, parseWorkspaceFolder(parsedConfig)))
   api.nvim_input('<esc>')
 end

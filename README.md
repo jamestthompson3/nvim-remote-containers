@@ -6,7 +6,7 @@ This plugin aims to give you the functionality of VSCode's [remote container dev
 
 - `parseConfig`: parses `devcontainer.json` file
 - `attachToContainer`: Attaches to a docker container or builds a container from a user chose image
-- `buildImage`: Builds container from the Dockerfile specified in the `devcontainer.json` file
+- `buildImage`: Builds container from the Dockerfile specified in the `devcontainer.json` file. Takes a boolean parameter to determine whether or not to show the build process in a floating window or in the quickfix list.
 
 ## Available Vim Commands
 
@@ -16,6 +16,7 @@ This plugin aims to give you the functionality of VSCode's [remote container dev
 ## Extras
 
 Set your statusline to reflect the current connected container through `g:currentContainer`:
+
 ```viml
 hi Container guifg=#BADA55 guibg=Black
 set statusline+=%#Container#%{g:currentContainer}
@@ -24,6 +25,7 @@ set statusline+=%#Container#%{g:currentContainer}
 ## Usage
 
 If you are currently in a directory that has a `devcontainer.json` file, you can run the following vim commands:
+
 ```viml
 " If you haven't built the image specified in you config:
 :BuildImage
