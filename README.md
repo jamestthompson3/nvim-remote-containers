@@ -32,3 +32,8 @@ If you are currently in a directory that has a `devcontainer.json` file, you can
 " Attach to the container you just built / a previously built container
 :AttachToContainer
 ```
+
+
+## Contributing
+
+Lua code is formatted in a pre-commit hook using [stylelua](https://github.com/JohnnyMorganz/StyLua). Please install this as part of contributing to the project.
