@@ -1,7 +1,6 @@
 local utils = require 'utils'
 local api = vim.api
 local fn = vim.fn
-local loop = vim.loop
 
 local M = {}
 
@@ -57,65 +56,50 @@ local function parseWorkspaceFolder(config)
   return workspace
 end
 
-local function runContainer(name)
+local function getDockerArgs(imageId)
   local parsedConfig = M.parseConfig()
-  local stdout = loop.new_pipe(false)
-  local stderr = loop.new_pipe(false)
   local workspace = parseWorkspaceFolder(parsedConfig)
-  local cmd
+  local cmd = ""
+  local portBindings = {}
+  local args = {}
   if parsedConfig.runArgs then
     cmd = parsedConfig.runArgs
   else
     cmd = '/bin/sh'
   end
   local mountFolder = string.format("%s:%s", workspace, parsedConfig.workspaceFolder)
-  local initialArgs = {'run', '-id','-v', mountFolder}
+  local initialArgs = {'run', '-id','-v', mountFolder, '--rm'}
   if not parsedConfig.forwardPorts or fn.len(parsedConfig.forwardPorts) == 0 then
-    args = fn.extend(initialArgs, {name.image, cmd})
+    args = fn.extend(initialArgs, {imageId, cmd})
   else
-    portBindings = {}
     for _, port in pairs(parsedConfig.forwardPorts) do
       vim.list_extend(portBindings, {'-p', string.format("%d:%d", port, port)})
     end
-    local finalArgs = fn.extend(initialArgs, portBindings)
-    args = fn.extend(finalArgs, {name.image, cmd})
+    args = fn.extend(initialArgs, portBindings)
   end
-  handle = loop.spawn('docker', {
+  return vim.list_extend(args, {imageId})
+end
+
+local function runContainer(name)
+  local args = getDockerArgs(name.image)
+  utils.spawn('docker', {
     args = args,
-    stdio = {stdout,stderr}
   }, vim.schedule_wrap(function()
-    stdout:read_stop()
-    stderr:read_stop()
-    stdout:close()
-    stderr:close()
-    handle:close()
     print(string.format("Container %s running succesfully", name.name))
     vim.g.currentContainer = fn.system(string.format("docker inspect --format '{{.Name}}' %s", dockerId)):gsub("/", "")
   end))
-  loop.read_start(stdout, onread)
-  loop.read_start(stderr, onread)
 end
 
 local function startContainer(name)
-  local parsedConfig = M.parseConfig()
-  local stdout = loop.new_pipe(false)
-  local stderr = loop.new_pipe(false)
-  handle = loop.spawn('docker', {
+  utils.spawn('docker', {
     args = {'start', name.name },
-    stdio = {stdout, stderr}
   }, function()
-    stdout:read_stop()
-    stderr:read_stop()
-    stdout:close()
-    stderr:close()
-    handle:close()
     print(string.format("Container %s started succesfully", name.name))
   end)
-  loop.read_start(stdout, onread)
-  loop.read_start(stderr, onread)
 end
 
 local function buildFromImage()
+  local foundImages
   local images = {}
   foundImages = fn.systemlist("docker image ls -a --format '{{.Repository}}:{{.Tag}} {{.ID}}'")
   if tonumber(fn.len(foundImages)) then
@@ -136,7 +120,7 @@ end
 
 -- TODO: Still need to correctly set the current container
 -- via inspecting the container created when we run the image.
-function M.runImage()
+function M.startImage()
   local images = {}
   local foundImages = fn.systemlist("docker image ls -a --format '{{.Repository}} {{.Tag}} {{.ID}}'")
   if fn.len(foundImages) == 0 then
@@ -146,13 +130,24 @@ function M.runImage()
   for i, img in pairs(foundImages) do
     print(string.format('%d. %s', i, img))
     local name = vim.split(img, "%s")
-    table.insert(images,{image = name[2], name = name[1]})
+    table.insert(images,{name = name[1], tag = name[2], id = name[3]})
   end
   local selected = tonumber(fn.input('Select image number: '))
   if not selected then
     return
   end
-  runContainer(images[selected])
+  M.runImage(images[selected].id)
+end
+
+
+function M.runImage(imageId)
+  local args = getDockerArgs(imageId)
+  print("starting: %s", dockerId)
+  utils.spawn('docker', {
+    args = args
+  }, {stdout = onread, stderr = onread}, vim.schedule_wrap(function ()
+    vim.g.currentContainer = fn.system(string.format("docker ps -af id='%s' --format '{{.Names}}'", dockerId)):gsub("/", "")
+  end))
 end
 
 function M.attachToContainer()
@@ -183,8 +178,6 @@ function M.attachToContainer()
   end
 end
 
--- TODO some sort of callback to restart the process
--- using spawn currently spams the floating window :/
 function M.buildImage(floating)
   local parsedConfig = M.parseConfig()
   print("Creating image from: ", parsedConfig.dockerFile)

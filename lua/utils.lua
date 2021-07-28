@@ -1,27 +1,31 @@
--- Taken from https://github.com/norcalli/nvim_utils/
 local M = {}
-function M.clean_handles()
-  local n = 1
-  while n <= #HANDLES do
-    if HANDLES[n]:is_closing() then
-      table.remove(HANDLES, n)
-    else
-      n = n + 1
-    end
+local loop = vim.loop
+
+local function safe_close(handle)
+  if not loop.is_closing(handle) then
+    loop.close(handle)
   end
 end
 
-HANDLES = {}
-
-function M.spawn(cmd, params, onexit)
-  local handle, pid
-  handle, pid = vim.loop.spawn(cmd, params, function(code, signal)
-    if type(onexit) == 'function' then onexit(code, signal) end
-    handle:close()
-    M.clean_handles()
-  end)
-  table.insert(HANDLES, handle)
-  return handle, pid
+function M.spawn(cmd, opts, input, onexit)
+  local inpt = input or { stdout = function()
+  end, stderr = function()
+end }
+local handle
+local stdout = loop.new_pipe(false)
+local stderr = loop.new_pipe(false)
+handle, _ = loop.spawn(cmd, vim.tbl_extend("force", opts, { stdio = { stdout, stderr } }), function(code, signal)
+  if type(onexit) == "function" then
+    onexit(code, signal)
+  end
+  loop.read_stop(stdout)
+  loop.read_stop(stderr)
+  safe_close(handle)
+  safe_close(stdout)
+  safe_close(stderr)
+end)
+loop.read_start(stdout, inpt.stdout)
+loop.read_start(stderr, inpt.stderr)
 end
 
 --- Check if a file or directory exists in this path
@@ -42,42 +46,42 @@ function M.log(item)
 end
 
 function M.floatingWindow()
-	-- get the editor's max width and height
-	local width = vim.api.nvim_get_option("columns")
-	local height = vim.api.nvim_get_option("lines")
+  -- get the editor's max width and height
+  local width = vim.api.nvim_get_option("columns")
+  local height = vim.api.nvim_get_option("lines")
 
-	-- create a new, scratch buffer, for fzf
-	local buf = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_buf_set_option(buf, "buftype", "nofile")
+  -- create a new, scratch buffer, for fzf
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_option(buf, "buftype", "nofile")
 
-	-- if the editor is big enough
-	if width > 150 or height > 35 then
-		-- fzf's window height is 3/4 of the max height, but not more than 30
-		local win_height = math.min(math.ceil(height * 3 / 4), 30)
-		local win_width
+  -- if the editor is big enough
+  if width > 150 or height > 35 then
+    -- fzf's window height is 3/4 of the max height, but not more than 30
+    local win_height = math.min(math.ceil(height * 3 / 4), 30)
+    local win_width
 
-		-- if the width is small
-		if width < 150 then
-			-- just subtract 8 from the editor's width
-			win_width = math.ceil(width - 8)
-		else
-			-- use 90% of the editor's width
-			win_width = math.ceil(width * 0.9)
-		end
+    -- if the width is small
+    if width < 150 then
+      -- just subtract 8 from the editor's width
+      win_width = math.ceil(width - 8)
+    else
+      -- use 90% of the editor's width
+      win_width = math.ceil(width * 0.9)
+    end
 
-		-- settings for the fzf window
-		local opts = {
-			relative = "editor",
-			width = win_width,
-			height = win_height,
-			row = math.ceil((height - win_height) / 2),
-			col = math.ceil((width - win_width) / 2),
-			style = "minimal",
-		}
+    -- settings for the fzf window
+    local opts = {
+      relative = "editor",
+      width = win_width,
+      height = win_height,
+      row = math.ceil((height - win_height) / 2),
+      col = math.ceil((width - win_width) / 2),
+      style = "minimal",
+    }
 
-		-- create a new floating window, centered in the editor
-		local win = vim.api.nvim_open_win(buf, true, opts)
-	end
+    -- create a new floating window, centered in the editor
+    local win = vim.api.nvim_open_win(buf, true, opts)
+  end
 end
 
 return M
