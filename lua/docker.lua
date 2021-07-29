@@ -148,7 +148,6 @@ end
 
 function M.runImage(imageId)
 	local args = getDockerArgs(imageId)
-	print("starting: %s", dockerId)
 	utils.spawn(
 		"docker",
 		{
@@ -156,6 +155,7 @@ function M.runImage(imageId)
 		},
 		{ stdout = onread, stderr = onread },
 		vim.schedule_wrap(function()
+			print("starting: %s", dockerId)
 			vim.g.currentContainer =
 				fn.system(
 					string.format("docker ps -af id='%s' --format '{{.Names}}'", dockerId)
@@ -195,14 +195,30 @@ end
 function M.buildImage(floating)
 	local parsedConfig = M.parseConfig()
 	print("Creating image from: ", parsedConfig.dockerFile)
-	print(floating)
-	if floating then
+	if floating == "true" then
 		utils.floatingWindow()
 	else
 		api.nvim_command("copen")
 	end
+	local tag = fn.system("git rev-parse --show-toplevel")
+	if string.find(tag, "fatal") ~= nil then
+		local dirs
+		local cwd
+		cwd = api.nvim_exec("pwd", true)
+		dirs = vim.split(cwd, "/")
+		tag = dirs[#dirs]:gsub("\n", "")
+	else
+		local dirs
+		dirs = vim.split(tag, "/")
+		tag = dirs[#dirs]:gsub("\n", "")
+	end
 	api.nvim_command(
-		string.format("term docker build -f %s %s", parsedConfig.dockerFile, parseWorkspaceFolder(parsedConfig))
+		string.format(
+			"term docker build -f %s %s -t %s",
+			parsedConfig.dockerFile,
+			parseWorkspaceFolder(parsedConfig),
+			tag
+		)
 	)
 	api.nvim_input("<esc>")
 end

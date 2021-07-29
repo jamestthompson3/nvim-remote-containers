@@ -1,2 +1,3 @@
 command! AttachToContainer lua require'docker'.attachToContainer()
-command! BuildImage lua require'docker'.buildImage(false)
+command! -nargs=1 BuildImage  lua require'docker'.buildImage(<f-args>)
+command! StartImage lua require'docker'.startImage()

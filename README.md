@@ -27,10 +27,13 @@ set statusline+=%#Container#%{g:currentContainer}
 If you are currently in a directory that has a `devcontainer.json` file, you can run the following vim commands:
 
 ```viml
-" If you haven't built the image specified in you config:
-:BuildImage
+" If you haven't built the image specified in you config.
+" Takes `true` or `false` depending on whether or not you want to see the build progress in a floating window.
+:BuildImage 
 " Attach to the container you just built / a previously built container
 :AttachToContainer
+" Start a container from a pre-built image
+:StartImage
 ```
 
 
