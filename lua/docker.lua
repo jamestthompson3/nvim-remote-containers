@@ -125,8 +125,6 @@ local function buildFromImage()
 	runContainer(images[selected])
 end
 
--- TODO: Still need to correctly set the current container
--- via inspecting the container created when we run the image.
 function M.startImage()
 	local images = {}
 	local foundImages = fn.systemlist("docker image ls -a --format '{{.Repository}} {{.Tag}} {{.ID}}'")

@@ -11,7 +11,8 @@ This plugin aims to give you the functionality of VSCode's [remote container dev
 ## Available Vim Commands
 
 - `AttachToContainer` wrapper for the `attachToContainer` lua function.
-- `BuildImage` wrapper for the `buildImage` lua function.
+- `BuildImage` wrapper for the `buildImage` lua function, takes "true" or "false" as an argument to decide whether or not to show the build progress in a floating window.
+- `StartImage` lists all available images and starts the one selected by you given the arguments found in the `devcontainer.json` file in your project's workspace.
 
 ## Extras
 
@@ -29,13 +30,12 @@ If you are currently in a directory that has a `devcontainer.json` file, you can
 ```viml
 " If you haven't built the image specified in you config.
 " Takes `true` or `false` depending on whether or not you want to see the build progress in a floating window.
-:BuildImage 
+:BuildImage
 " Attach to the container you just built / a previously built container
 :AttachToContainer
 " Start a container from a pre-built image
 :StartImage
 ```
-
 
 ## Contributing
 
