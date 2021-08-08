@@ -4,17 +4,6 @@ local fn = vim.fn
 
 local M = {}
 
-local dockerId = ""
-local function onread(err, data)
-	if err then
-		print("ERROR: ", err)
-		-- TODO handle err
-	end
-	if data then
-		dockerId = data
-	end
-end
-
 function M.parseConfig()
 	if not (fn.executable("docker")) then
 		error("must install docker for this functionality")
@@ -82,19 +71,31 @@ end
 
 local function runContainer(name)
 	local args = getDockerArgs(name.image)
-	utils.spawn(
-		"docker",
-		{
-			args = args,
-		},
+	local dockerId
+	utils.spawn("docker", {
+		args = args,
+		stderr = function(err, id)
+			if err then
+				print(err)
+			else
+				if id then
+					dockerId = id
+				end
+			end
+		end,
+	}, function()
+		print("%s started successfully", name.name)
 		vim.schedule_wrap(function()
-			print(string.format("Container %s running succesfully", name.name))
-			vim.g.currentContainer = fn.system(string.format("docker inspect --format '{{.Name}}' %s", dockerId)):gsub(
-				"/",
-				""
-			)
+			while dockerId == nil do
+				-- Hang out while we get the dockerId
+				-- Not ideal, but it works for now...
+			end
+			vim.g.currentContainer =
+				fn.system(
+					string.format("docker ps -af id='%s' --format '{{.Names}}'", dockerId)
+				):gsub("/", "")
 		end)
-	)
+	end)
 end
 
 local function startContainer(name)
@@ -102,6 +103,7 @@ local function startContainer(name)
 		args = { "start", name.name },
 	}, function()
 		print(string.format("Container %s started succesfully", name.name))
+		vim.g.currentContainer = name.name
 	end)
 end
 
@@ -146,20 +148,32 @@ end
 
 function M.runImage(imageId)
 	local args = getDockerArgs(imageId)
-	utils.spawn(
-		"docker",
-		{
-			args = args,
-		},
-		{ stdout = onread, stderr = onread },
+	local dockerId
+	utils.spawn("docker", {
+		args = args,
+		-- docker outputs id to stderr
+		stderr = function(err, id)
+			if err then
+				print(err)
+			else
+				if id then
+					dockerId = id
+				end
+			end
+		end,
+	}, function()
+		print("%s started successfully", imageId)
 		vim.schedule_wrap(function()
-			print("starting: %s", dockerId)
+			while dockerId == nil do
+				-- Hang out while we get the dockerId
+				-- Not ideal, but it works for now...
+			end
 			vim.g.currentContainer =
 				fn.system(
 					string.format("docker ps -af id='%s' --format '{{.Names}}'", dockerId)
 				):gsub("/", "")
 		end)
-	)
+	end)
 end
 
 function M.attachToContainer()

@@ -7,8 +7,8 @@ local function safe_close(handle)
 	end
 end
 
-function M.spawn(cmd, opts, input, onexit)
-	local inpt = input or { stdout = function() end, stderr = function() end }
+function M.spawn(cmd, opts, onexit)
+	local inpt = { stdout = opts.stdout or function() end, stderr = opts.stderr or function() end }
 	local handle
 	local stdout = loop.new_pipe(false)
 	local stderr = loop.new_pipe(false)
@@ -78,7 +78,7 @@ function M.floatingWindow()
 		}
 
 		-- create a new floating window, centered in the editor
-		local win = vim.api.nvim_open_win(buf, true, opts)
+		vim.api.nvim_open_win(buf, true, opts)
 	end
 end
 
