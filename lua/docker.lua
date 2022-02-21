@@ -1,38 +1,20 @@
 local utils = require("utils")
 local api = vim.api
 local fn = vim.fn
-
 local M = {}
 
-function M.parseConfig()
-	if not (fn.executable("docker")) then
-		error("must install docker for this functionality")
+function M.setupContainers()
+	local config = utils.parseConfig("image")
+
+	local imageExists = fn.system("docker image ls"):find(config.image)
+	if not imageExists then
+		print("image not found, installing now...")
+		utils.spawn("docker", {
+			args = { "pull", config.image },
+		}, function()
+			print("Image pulled sucessfully")
+		end)
 	end
-	if not (utils.exists("devcontainer.json")) then
-		-- TODO interactive creation of config
-		print("no configuration file found")
-		return
-	end
-	local parsedConfig = fn.json_decode(fn.join(fn.readfile("devcontainer.json")))
-	if not parsedConfig.image then
-		if not parsedConfig.dockerFile then
-			error("must either specify an image or a Dockerfile")
-			return
-		end
-	end
-	if parsedConfig.image then
-		local image = parsedConfig.image
-		local imageExists = fn.system("docker image ls"):find(image)
-		if not imageExists then
-			print("image not found, installing now...")
-			utils.spawn("docker", {
-				args = { "pull", image },
-			}, function()
-				print("Image Pulled Successfully")
-			end)
-		end
-	end
-	return parsedConfig
 end
 
 local function parseWorkspaceFolder(config)
@@ -46,7 +28,7 @@ local function parseWorkspaceFolder(config)
 end
 
 local function getDockerArgs(imageId)
-	local parsedConfig = M.parseConfig()
+	local parsedConfig = utils.parseConfig("image")
 	local workspace = parseWorkspaceFolder(parsedConfig)
 	local cmd = ""
 	local portBindings = {}
@@ -205,7 +187,7 @@ function M.attachToContainer()
 end
 
 function M.buildImage(floating)
-	local parsedConfig = M.parseConfig()
+	local parsedConfig = utils.parseConfig("dockerFile")
 	print("Creating image from: ", parsedConfig.dockerFile)
 	if floating == "true" then
 		utils.floatingWindow()
