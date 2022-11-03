@@ -31,10 +31,12 @@ set statusline+=%#Container#%{g:currentContainer}
 
 ## Usage
 
+Before using this plugin, you should install the `jsonc` treesitter module: `:TSInstall jsonc`, this is needed to parse the config file.
+
 If you are in the root directory that has the `.devcontainer/` folder, you can run the following vim commands:
 
 ```viml
-" If you haven't built the image specified in you config.
+" If you haven't built the image specified in your config.
 " Takes `true` or `false` depending on whether or not you want to see the build progress in a floating window.
 :BuildImage
 " Attach to the container you just built / a previously built container
