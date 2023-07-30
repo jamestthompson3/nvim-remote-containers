@@ -53,12 +53,17 @@ function M.parseConfig(configType)
 	local config = vim.fn.join(vim.fn.readfile(".devcontainer/devcontainer.json"), '\n')
 	local uncommented_config = jsonc_to_json(config)
 	local parsedConfig = vim.fn.json_decode(uncommented_config)
-	if not parsedConfig.image and not parsedConfig.dockerComposeFile and not parsedConfig.dockerFile then
+	if parsedConfig and not parsedConfig.image and not parsedConfig.dockerComposeFile and not parsedConfig.dockerFile then
 		error("must have an image, dockerfile, or docker-compose file")
 		return
 	end
 
-	if not parsedConfig[configType] then
+	if configType == "image" and parsedConfig and not parsedConfig.image then
+		print("no image defined in the devcontainer.json")
+		return
+	end
+
+	if parsedConfig and not parsedConfig[configType] then
 		error("Must have " .. configType .. " defined in the devcontainer.json")
 		return
 	end

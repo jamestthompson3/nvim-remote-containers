@@ -19,7 +19,7 @@ end
 
 local function parseWorkspaceFolder(config)
 	local workspace
-	if config.workspaceMount:find("localWorkspaceFolder") then
+	if not config or config.workspaceMount:find("localWorkspaceFolder") then
 		workspace = api.nvim_exec("pwd", true)
 	else
 		workspace = config.workspaceMount
@@ -32,15 +32,19 @@ local function getDockerArgs(imageId)
 	local workspace = parseWorkspaceFolder(parsedConfig)
 	local cmd = ""
 	local portBindings = {}
+	local workspaceInContainer = "/app"
 	local args = {}
-	if parsedConfig.runArgs then
+	if parsedConfig and parsedConfig.runArgs then
 		cmd = parsedConfig.runArgs
 	else
 		cmd = "/bin/sh"
 	end
-	local mountFolder = string.format("%s:%s", workspace, parsedConfig.workspaceFolder)
+	if parsedConfig and parsedConfig.workspaceFolder then
+		workspaceInContainer = parsedConfig.workspaceFolder
+	end
+	local mountFolder = string.format("%s:%s", workspace, workspaceInContainer)
 	local initialArgs = { "run", "-id", "-v", mountFolder, "--rm" }
-	if not parsedConfig.forwardPorts or fn.len(parsedConfig.forwardPorts) == 0 then
+	if not parsedConfig or not parsedConfig.forwardPorts or fn.len(parsedConfig.forwardPorts) == 0 then
 		args = fn.extend(initialArgs, { imageId, cmd })
 	else
 		for _, port in pairs(parsedConfig.forwardPorts) do
