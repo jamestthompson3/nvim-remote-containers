@@ -1,7 +1,7 @@
 local M = {}
 local utils = require("utils")
 
-function prepareComposeFiles(composeFiles)
+local function prepareComposeFiles(composeFiles)
 	local resultingParams = {}
 	if type(composeFiles) == "table" then
 		for _, composeFilePath in pairs(composeFiles) do
