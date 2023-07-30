@@ -7,15 +7,15 @@ local function jsonc_no_comment(content)
   local tree = parser:parse()
   local root = tree[1]:root()
   -- create comment query
-  local query = vim.treesitter.parse_query('jsonc', '((comment) @c (#offset! @c))')
+  local query = vim.treesitter.query.parse('jsonc', '((comment) @c (#offset! @c))')
   -- split content lines
   local lines = vim.split(content, '\n')
 
   -- iterate over query match metadata
   for _, _, metadata in query:iter_matches(root, content, root:start(), root:end_()) do
-    local region = metadata.content[1]
-    local line = region[1] + 1
-    local col_start = region[2]
+    local range = metadata[1].range
+    local line = range[1] + 1
+    local col_start = range[2]
     -- remove comment by extracting the text before
     lines[line] = string.sub(lines[line], 1, col_start)
   end
@@ -50,8 +50,9 @@ function M.parseConfig(configType)
 	M.systemChecks()
 
 	-- TODO: Check current directory and the devcontainer
-  local config = vim.fn.join(vim.fn.readfile(".devcontainer/devcontainer.json"))
-	local parsedConfig = vim.fn.json_decode(jsonc_to_json(config))
+	local config = vim.fn.join(vim.fn.readfile(".devcontainer/devcontainer.json"), '\n')
+	local uncommented_config = jsonc_to_json(config)
+	local parsedConfig = vim.fn.json_decode(uncommented_config)
 	if not parsedConfig.image and not parsedConfig.dockerComposeFile and not parsedConfig.dockerFile then
 		error("must have an image, dockerfile, or docker-compose file")
 		return
