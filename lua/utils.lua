@@ -12,7 +12,7 @@ local function jsonc_no_comment(content)
   local lines = vim.split(content, '\n')
 
   -- iterate over query match metadata
-  for _, _, metadata in query:iter_matches(root, content, root:start(), root:end_()) do
+  for _, _, metadata in query:iter_matches(root, content, root:start(), root:end_(), nil) do
     local range = metadata[1].range
     local line = range[1] + 1
     local col_start = range[2]
