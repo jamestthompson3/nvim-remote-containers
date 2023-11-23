@@ -76,10 +76,8 @@ local function runContainer(name)
 				-- Hang out while we get the dockerId
 				-- Not ideal, but it works for now...
 			end
-			vim.g.currentContainer =
-				fn.system(
-					string.format("docker ps -af id='%s' --format '{{.Names}}'", dockerId)
-				):gsub("/", "")
+			vim.g.currentContainer = fn.system(string.format("docker ps -af id='%s' --format '{{.Names}}'", dockerId))
+				:gsub("/", "")
 		end)
 	end)
 end
@@ -154,10 +152,8 @@ function M.runImage(imageId)
 				-- Hang out while we get the dockerId
 				-- Not ideal, but it works for now...
 			end
-			vim.g.currentContainer =
-				fn.system(
-					string.format("docker ps -af id='%s' --format '{{.Names}}'", dockerId)
-				):gsub("/", "")
+			vim.g.currentContainer = fn.system(string.format("docker ps -af id='%s' --format '{{.Names}}'", dockerId))
+				:gsub("/", "")
 		end)
 	end)
 end
