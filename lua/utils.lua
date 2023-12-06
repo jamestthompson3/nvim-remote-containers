@@ -3,35 +3,35 @@ local uv = vim.loop
 local message = {}
 
 local function jsonc_no_comment(content)
-  local parser = vim.treesitter.get_string_parser(content, 'jsonc')
-  local tree = parser:parse()
-  local root = tree[1]:root()
-  -- create comment query
-  local query = vim.treesitter.query.parse('jsonc', '((comment) @c (#offset! @c))')
-  -- split content lines
-  local lines = vim.split(content, '\n')
+	local parser = vim.treesitter.get_string_parser(content, "jsonc")
+	local tree = parser:parse()
+	local root = tree[1]:root()
+	-- create comment query
+	local query = vim.treesitter.query.parse("jsonc", "((comment) @c (#offset! @c))")
+	-- split content lines
+	local lines = vim.split(content, "\n")
 
-  -- iterate over query match metadata
-  for _, _, metadata in query:iter_matches(root, content, root:start(), root:end_()) do
-    local range = metadata[1].range
-    local line = range[1] + 1
-    local col_start = range[2]
-    -- remove comment by extracting the text before
-    lines[line] = string.sub(lines[line], 1, col_start)
-  end
-  -- join lines
-  local result = vim.fn.join(lines, '\n')
-  return result
+	-- iterate over query match metadata
+	for _, _, metadata in query:iter_matches(root, content, root:start(), root:end_()) do
+		local range = metadata[1].range
+		local line = range[1] + 1
+		local col_start = range[2]
+		-- remove comment by extracting the text before
+		lines[line] = string.sub(lines[line], 1, col_start)
+	end
+	-- join lines
+	local result = vim.fn.join(lines, "\n")
+	return result
 end
 
 local function jsonc_no_trailing_comma(content)
-  return vim.fn.substitute(content, ',\\_s*}', '}', 'g')
+	return vim.fn.substitute(content, ",\\_s*}", "}", "g")
 end
 
 local function jsonc_to_json(content)
-  content = jsonc_no_trailing_comma(content)
-  content = jsonc_no_comment(content)
-  return content
+	content = jsonc_no_trailing_comma(content)
+	content = jsonc_no_comment(content)
+	return content
 end
 
 function M.systemChecks()
@@ -50,10 +50,15 @@ function M.parseConfig(configType)
 	M.systemChecks()
 
 	-- TODO: Check current directory and the devcontainer
-	local config = vim.fn.join(vim.fn.readfile(".devcontainer/devcontainer.json"), '\n')
+	local config = vim.fn.join(vim.fn.readfile(".devcontainer/devcontainer.json"), "\n")
 	local uncommented_config = jsonc_to_json(config)
 	local parsedConfig = vim.fn.json_decode(uncommented_config)
-	if parsedConfig and not parsedConfig.image and not parsedConfig.dockerComposeFile and not parsedConfig.dockerFile then
+	if
+		parsedConfig
+		and not parsedConfig.image
+		and not parsedConfig.dockerComposeFile
+		and not parsedConfig.dockerFile
+	then
 		error("must have an image, dockerfile, or docker-compose file")
 		return
 	end
