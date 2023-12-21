@@ -55,3 +55,4 @@ If you are in the root directory that has the `.devcontainer/` folder, you can r
 ## Contributing
 
 Lua code is formatted in a pre-commit hook using [stylelua](https://github.com/JohnnyMorganz/StyLua). Please install this as part of contributing to the project.
+Contributors using Linux may use the pre-push hook to ensure formatting. Install the pre-push hook by running `tools/init.sh`.
