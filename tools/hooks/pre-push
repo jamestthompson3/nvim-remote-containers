@@ -1,0 +1,49 @@
+#!/usr/bin/sh
+
+echo "checking formatting with stylua."
+echo "use NO_VERIFY=1 or --no-verify to skip pre-push check"
+echo ""
+
+# Get the version defined in the CI stylua check config
+STYLUA_VERSION="$(awk '/rev:/ {print $2;}' .pre-commit-config.yaml)"
+
+# Use stylua installed on the $PATH if exists
+STYLUA_BIN="$(which stylua 2>/dev/null)"
+
+
+if [ ! "$STYLUA_BIN" ]; then
+    # There may already be a stylua in .bin from a prior run
+    if [ -d .bin/ ] && [ -f .bin/stylua ]; then
+        echo "found stylua in .bin/"
+        echo ""
+        STYLUA_BIN=".bin/stylua"
+    else
+        echo "stylua must be installed. ${STYLUA_VERSION} is used by this repo."
+        echo "attempt to download and install it? y/N"
+        read -r input
+        if [ "$input" = 'y' ]; then
+            mkdir .bin/
+            wget -O .bin/stylua.zip "https://github.com/JohnnyMorganz/StyLua/releases/download/$STYLUA_VERSION/stylua-linux.zip"
+            cd .bin || exit 1
+            unzip stylua.zip 1>/dev/null && rm stylua.zip
+            cd .. || exit 1
+            STYLUA_BIN=".bin/stylua"
+        else
+            exit 1
+        fi
+    fi
+elif [ "$($STYLUA_BIN --version)" != "$STYLUA_VERSION" ]; then
+    echo "repo uses stylua $STYLUA_VERSION, but $($STYLUA_BIN --version) was found on PATH."
+    echo "this may cause discrepancies with the CI check."
+    echo "continuing anyway..."
+    echo ""
+fi
+
+# Use stylua to check formatting; disallow push on fail
+CHECK_OUTPUT="$($STYLUA_BIN --check ./)"
+if [ "$CHECK_OUTPUT" ]; then
+    echo "run 'stylua ./' before pushing"
+    echo "$CHECK_OUTPUT"
+    exit 1
+fi
+exit 0
